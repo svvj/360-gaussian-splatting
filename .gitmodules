@@ -7,3 +7,7 @@
 [submodule "SIBR_viewers"]
 	path = SIBR_viewers
 	url = https://gitlab.inria.fr/sibr/sibr_core.git
+[submodule "perspective_and_equirectangular"]
+	path = perspective_and_equirectangular
+	url = https://github.com/inuex35/Perspective-and-Equirectangular.git
+	branch = for_gaussian_splatting
