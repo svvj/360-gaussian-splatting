@@ -180,13 +180,13 @@ def read_opensfm_extrinsics_split(reconstructions):
             camera_id = 0
             orientation = ["front", "right", "back", "left"]
             for j in range(len(orientation)): 
-                image_name = orientation[i] + shot
+                image_name = orientation[j] + shot
                 xys = np.array([0, 0]) # dummy
                 quaternion_multiply
                 qvec_split = quaternion_multiply(qvec, create_yaw_quaternion(90 * j))
                 point3D_ids = np.array([0, 0]) # dummy
-                images[image_id] = Image(
-                    id=image_id, qvec=qvec_split, tvec=tvec,
+                images[image_id + j] = Image(
+                    id=image_id + j, qvec=qvec_split, tvec=tvec,
                     camera_id=camera_id, name=image_name,
                     xys=xys, point3D_ids=point3D_ids)
     return images
