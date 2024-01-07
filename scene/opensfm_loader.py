@@ -135,7 +135,7 @@ def read_opensfm_intrinsics_split(reconstructions):
     cameras = {}
     for reconstruction in reconstructions:
         for i, camera in enumerate(reconstruction["cameras"]):
-            if reconstruction["cameras"][camera]['projection_type'] = 'spherical':
+            if reconstruction["cameras"][camera]['projection_type'] == 'spherical':
                 camera_id = i
                 model = "PINHOLE"
                 width = reconstruction["cameras"][camera]["width"]
