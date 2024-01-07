@@ -300,6 +300,8 @@ def readOpensfmSceneInfo(path, images, eval, llffhold=8):
         reconstruction = json.load(f)
 
         reading_dir = "images" if images == None else images
+        cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
+        cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
         cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
         cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
