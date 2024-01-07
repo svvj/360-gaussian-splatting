@@ -295,7 +295,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
     return scene_info
 
 def readOpensfmSceneInfo(path, images, eval, llffhold=8):
-    reconstruction_file = os.path.join(args.path, 'reconstruction.json')
+    reconstruction_file = os.path.join(path, 'reconstruction.json')
     with open(reconstruction_file) as f:
         reconstruction = json.load(f)
 
