@@ -172,9 +172,10 @@ def read_opensfm_intrinsics(reconstructions):
 def read_opensfm_extrinsics_split(reconstructions):
 
     images = {}
+    i = 0
     for reconstruction in reconstructions:
-        for i, shot in enumerate(reconstruction["shots"]):
-            image_id = i * 4
+        for shot in reconstruction["shots"]:
+            image_id = i
             translation = reconstruction["shots"][shot]["translation"]
             rotation = reconstruction["shots"][shot]["rotation"]
             qvec = get_quaternion_from_euler(rotation[0], rotation[1], rotation[2])
@@ -190,6 +191,8 @@ def read_opensfm_extrinsics_split(reconstructions):
                     id=image_id + j, qvec=qvec_split, tvec=tvec,
                     camera_id=camera_id, name=image_name,
                     xys=xys, point3D_ids=point3D_ids)
+                i += 1
+
     return images
 
 def read_opensfm_extrinsics(reconstructions):
