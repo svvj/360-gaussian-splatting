@@ -66,24 +66,19 @@ def rotmat2qvec(R):
         qvec *= -1
     return qvec
 
-def get_quaternion_from_euler(roll, pitch, yaw):
-  """
-  Convert an Euler angle to a quaternion.
-   
-  Input
-    :param roll: The roll (rotation around x-axis) angle in radians.
-    :param pitch: The pitch (rotation around y-axis) angle in radians.
-    :param yaw: The yaw (rotation around z-axis) angle in radians.
- 
-  Output
-    :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-  """
-  qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-  qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
-  qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
-  qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
- 
-  return np.array([qx, qy, qz, qw])
+def angle_axis_to_quaternion(angle_axis: np.ndarray):
+    angle = np.linalg.norm(angle_axis)
+
+    x = angle_axis[0] / angle
+    y = angle_axis[1] / angle
+    z = angle_axis[2] / angle
+
+    qw = math.cos(angle / 2.0)
+    qx = x * math.sqrt(1 - qw * qw)
+    qy = y * math.sqrt(1 - qw * qw)
+    qz = z * math.sqrt(1 - qw * qw)
+
+    return np.array([qw, qx, qy, qz])
 
 def quaternion_multiply(q1, q2):
     w1, x1, y1, z1 = q1[0], q1[1], q1[2], q1[3]
@@ -139,11 +134,11 @@ def read_opensfm_intrinsics_split(reconstructions):
         for i, camera in enumerate(reconstruction["cameras"]):
             if reconstruction["cameras"][camera]['projection_type'] == 'spherical':
                 camera_id = i
-                model = "PINHOLE"
-                width = reconstruction["cameras"][camera]["width"]
-                height = reconstruction["cameras"][camera]["height"]
-                f = reconstruction["cameras"][camera]["width"] / 2 # assume fov = 90
-                params = np.array([f, width / 2.0, height / 2.0])
+                model = "SIMPLE_PINHOLE"
+                width = reconstruction["cameras"][camera]["width"] / 4
+                height = width#econstruction["cameras"][camera]["height"]
+                f = width / 2# assume fov = 90
+                params = np.array([f, width , height])
                 cameras[camera_id] = Camera(id=camera_id, model=model,
                                             width=width, height=height,
                                             params=params)
@@ -159,10 +154,10 @@ def read_opensfm_intrinsics(reconstructions):
             if reconstruction["cameras"][camera]['projection_type'] == 'spherical':
                 camera_id = 0 # assume only one camera
                 model = "SIMPLE_PINHOLE"
-                width = reconstruction["cameras"][camera]["width"]
-                height = reconstruction["cameras"][camera]["height"]
+                width = reconstruction["cameras"][camera]["width"] / 4
+                height = width#econstruction["cameras"][camera]["height"]
                 f = reconstruction["cameras"][camera]["width"] / 2 # assume fov = 90
-                params = np.array([f, width / 2.0, height / 2.0])
+                params = np.array([f, width , height])
                 cameras[camera_id] = Camera(id=camera_id, model=model,
                                             width=width, height=height,
                                             params=params)
@@ -175,14 +170,14 @@ def read_opensfm_extrinsics_split(reconstructions):
     i = 0
     for reconstruction in reconstructions:
         for shot in reconstruction["shots"]:
-            image_id = i
             translation = reconstruction["shots"][shot]["translation"]
             rotation = reconstruction["shots"][shot]["rotation"]
-            qvec = get_quaternion_from_euler(rotation[0], rotation[1], rotation[2])
+            qvec = angle_axis_to_quaternion(rotation)
             tvec = np.array([translation[0], translation[1], translation[2]])
             camera_id = 0
             orientation = ["front", "right", "back", "left"]
             for j in range(len(orientation)): 
+                image_id = i
                 image_name = orientation[j] + shot
                 xys = np.array([0, 0]) # dummy
                 qvec_split = quaternion_multiply(qvec, create_yaw_quaternion(90 * j))
@@ -192,7 +187,6 @@ def read_opensfm_extrinsics_split(reconstructions):
                     camera_id=camera_id, name=image_name,
                     xys=xys, point3D_ids=point3D_ids)
                 i += 1
-
     return images
 
 def read_opensfm_extrinsics(reconstructions):
