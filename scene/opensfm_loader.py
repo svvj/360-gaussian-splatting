@@ -184,7 +184,6 @@ def read_opensfm_extrinsics_split(reconstructions):
             for j in range(len(orientation)): 
                 image_name = orientation[j] + shot
                 xys = np.array([0, 0]) # dummy
-                quaternion_multiply
                 qvec_split = quaternion_multiply(qvec, create_yaw_quaternion(90 * j))
                 point3D_ids = np.array([0, 0]) # dummy
                 images[image_id + j] = Image(
