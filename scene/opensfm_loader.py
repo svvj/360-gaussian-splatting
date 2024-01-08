@@ -98,7 +98,7 @@ def quaternion_multiply(q1, q2):
 
 def create_yaw_quaternion(degrees):
     radians = math.radians(degrees)
-    return [math.cos(radians / 2), 0, math.sin(radians / 2), 0]
+    return [math.cos(radians / 2), 0, 0, math.sin(radians / 2)]
 
 class Image(BaseImage):
     def qvec2rotmat(self):
@@ -178,7 +178,7 @@ def read_opensfm_extrinsics_split(reconstructions):
             image_id = i
             translation = reconstruction["shots"][shot]["translation"]
             rotation = reconstruction["shots"][shot]["rotation"]
-            qvec = get_quaternion_from_euler(rotation[0], rotation[1], rotation[2])
+            qvec = get_quaternion_from_euler(rotation[2], rotation[0], rotation[1])
             tvec = np.array([translation[0], translation[1], translation[2]])
             camera_id = 0
             orientation = ["front", "right", "back", "left"]
