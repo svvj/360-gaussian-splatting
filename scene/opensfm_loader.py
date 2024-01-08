@@ -108,6 +108,7 @@ def read_opensfm_points3D(reconstructions):
     xyzs = None
     rgbs = None
     errors = None
+    num_points = 0
     for reconstruction in reconstructions:
         num_points = num_points + len(reconstruction["points"])
 
