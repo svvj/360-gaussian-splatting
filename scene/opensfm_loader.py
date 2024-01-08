@@ -158,7 +158,7 @@ def read_opensfm_intrinsics(reconstructions):
         for i, camera in enumerate(reconstruction["cameras"]):
             if reconstruction["cameras"][camera]['projection_type'] == 'spherical':
                 camera_id = 0 # assume only one camera
-                model = "PINHOLE"
+                model = "SIMPLE_PINHOLE"
                 width = reconstruction["cameras"][camera]["width"]
                 height = reconstruction["cameras"][camera]["height"]
                 f = reconstruction["cameras"][camera]["width"] / 2 # assume fov = 90
@@ -178,7 +178,7 @@ def read_opensfm_extrinsics_split(reconstructions):
             image_id = i
             translation = reconstruction["shots"][shot]["translation"]
             rotation = reconstruction["shots"][shot]["rotation"]
-            qvec = get_quaternion_from_euler(rotation[2], rotation[0], rotation[1])
+            qvec = get_quaternion_from_euler(rotation[0], rotation[1], rotation[2])
             tvec = np.array([translation[0], translation[1], translation[2]])
             camera_id = 0
             orientation = ["front", "right", "back", "left"]
