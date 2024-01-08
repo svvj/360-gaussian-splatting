@@ -98,7 +98,7 @@ def quaternion_multiply(q1, q2):
 
 def create_yaw_quaternion(degrees):
     radians = math.radians(degrees)
-    return [math.cos(radians / 2), 0, 0, math.sin(radians / 2)]
+    return [math.cos(radians / 2), 0, math.sin(radians / 2), 0]
 
 class Image(BaseImage):
     def qvec2rotmat(self):
