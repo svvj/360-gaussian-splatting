@@ -22,7 +22,7 @@ class Scene:
 
     gaussians : GaussianModel
 
-    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0]):
+    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0], panorama=False):
         """b
         :param path: Path to colmap scene main folder.
         """
@@ -41,12 +41,12 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(args.source_path, "sparse")):
-            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)
+            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, panorama)
         if os.path.exists(os.path.join(args.source_path, "reconstruction.json")):
-            scene_info = sceneLoadTypeCallbacks["Opensfm"](args.source_path, args.images, args.eval)
+            scene_info = sceneLoadTypeCallbacks["Opensfm"](args.source_path, args.images, args.eval, panorama)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
-            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval)
+            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, panorama)
         else:
             assert False, "Could not recognize scene type!"
 

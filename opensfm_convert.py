@@ -13,31 +13,31 @@ def panorama2cube4(input_dir,output_dir):
     all_image = sorted(glob.glob(input_dir + '/*.*'))
     height, width = cv2.imread(all_image[0]).shape[:2]
     cube_size = int(width / 4)
-    print(all_image)
 
 
     for index in range(len(all_image)):
         equ = E2P.Equirectangular(all_image[index])    # Load equirectangular image
 
-        out_img = output_dir + '/' + os.path.basename(all_image[index])
-
         img = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output1 = output_dir + '/' +  'front' + os.path.basename(all_image[index])
+        output1 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'front.jpg'
         cv2.imwrite(output1, img)
 
         img = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output2 =output_dir + '/' + 'right' + os.path.basename(all_image[index]) 
+        output2 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'right.jpg'
+
         cv2.imwrite(output2, img)
 
         img = equ.GetPerspective(90, 180, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output3 = output_dir + '/' + 'back' + os.path.basename(all_image[index]) 
+        output3 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'back.jpg'
+
         cv2.imwrite(output3, img)
 
         img = equ.GetPerspective(90, 270, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output4 = output_dir + '/' + 'left' + os.path.basename(all_image[index]) 
+        output4 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'left.jpg'
+
         cv2.imwrite(output4, img)
 
-def panorama2cube(input_dir,output_dir, cube_size):
+def panorama2cube(input_dir,output_dir):
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -45,15 +45,12 @@ def panorama2cube(input_dir,output_dir, cube_size):
     all_image = sorted(glob.glob(input_dir + '/*.*'))
     height, width = cv2.imread(all_image[0]).shape[:2]
     cube_size = int(width / 4)
-    print(all_image)
 
 
     for index in range(len(all_image)):
         equ = E2P.Equirectangular(all_image[index])    # Load equirectangular image
 
-        out_img = output_dir + '/' + os.path.basename(all_image[index])
-        height, width = equ.shape[:2]
-        cube_size = width / 4
+        out_img = output_dir + '/' + 'panorama' + os.path.basename(all_image[index])
 
         img_0 = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_right = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)

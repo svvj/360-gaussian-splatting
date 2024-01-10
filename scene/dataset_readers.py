@@ -15,7 +15,7 @@ from PIL import Image
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
-from scene.opensfm_loader import read_opensfm_extrinsics_split, read_opensfm_intrinsics_split, qvec2rotmat, read_opensfm_points3D
+from scene.opensfm_loader import read_opensfm_extrinsics_split, read_opensfm_extrinsics, read_opensfm_intrinsics_split, read_opensfm_intrinsics, qvec2rotmat, read_opensfm_points3D
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
@@ -23,6 +23,7 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
+import math
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -105,6 +106,22 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
     sys.stdout.write('\n')
     return cam_infos
 
+def create_yaw_quaternion(degrees):
+    radians = - math.radians(degrees)
+    return np.array([math.cos(radians / 2), 0, 0, math.sin(radians / 2)])
+
+def qvec2rotmat(qvec):
+    return np.array([
+        [1 - 2 * qvec[2]**2 - 2 * qvec[3]**2,
+         2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+         2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2]],
+        [2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+         1 - 2 * qvec[1]**2 - 2 * qvec[3]**2,
+         2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1]],
+        [2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+         2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+         1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
+
 def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
@@ -131,12 +148,20 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
+        elif intr.model=="SPHERICAL":
+            FovY = math.pi / 2
+            FovX = 2 * math.pi
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
         image = Image.open(image_path)
+        R_y = np.array([[ 0.0, 0.0,  1.0], [ 0.0,  1.0,  0.0], [ -1.0,  0.0,  0.0]])
+        #R_z = np.array([[ 0.0, -1.0,  0.0], [ 1.0,  0.0,  0.0], [ 0.0,  0.0,  1.0]])
+        for i in range(extr.camera_id):
+            R = np.matmul(R, R_y.transpose())
+            T = np.matmul(R_y.transpose(), T)
 
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height)
@@ -294,14 +319,20 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readOpensfmSceneInfo(path, images, eval, llffhold=8):
+def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
     reconstruction_file = os.path.join(path, 'reconstruction.json')
     with open(reconstruction_file) as f:
         reconstruction = json.load(f)
 
         reading_dir = "images" if images == None else images
-        cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
-        cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
+        if panorama:
+            reading_dir = "images_pano"
+            cam_extrinsics = read_opensfm_extrinsics(reconstruction)
+            cam_intrinsics = read_opensfm_intrinsics(reconstruction)
+        else:
+            reading_dir = "images_split"
+            cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
+            cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
         cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
         cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
