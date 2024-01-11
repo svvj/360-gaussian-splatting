@@ -52,7 +52,7 @@ def panorama2cube(input_dir,output_dir):
 
         out_img = output_dir + '/' + 'panorama' + os.path.basename(all_image[index])
 
-        img_0 = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
+        img_front = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_right = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_left = equ.GetPerspective(90, -90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_back = equ.GetPerspective(90, 180, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
@@ -61,7 +61,7 @@ def panorama2cube(input_dir,output_dir):
         img_back_left = img_back[:, mid_width:width]
         img_back_right = img_back[:, :mid_width]
 
-        img = cv2.hconcat([img_back_left, img_left, img_0, img_right, img_back_right])
+        img = cv2.hconcat([img_back_left, img_left, img_front, img_right, img_back_right])
         cv2.imwrite(out_img, img)
 
 def main():

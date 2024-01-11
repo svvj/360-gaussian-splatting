@@ -17,7 +17,7 @@ import os
 CameraModel = collections.namedtuple(
     "CameraModel", ["model_id", "model_name", "num_params"])
 Camera = collections.namedtuple(
-    "Camera", ["id", "model", "width", "height", "params"])
+    "Camera", ["id", "model", "width", "height", "params", "panorama"])
 BaseImage = collections.namedtuple(
     "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"])
 Point3D = collections.namedtuple(
@@ -168,7 +168,7 @@ def read_opensfm_intrinsics(reconstructions):
                 params = np.array([f, width , height])
                 cameras[camera_id] = Camera(id=camera_id, model=model,
                                             width=width, height=height,
-                                            params=params)
+                                            params=params, panorama=True)
     return cameras
 
 
