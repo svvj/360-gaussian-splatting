@@ -83,21 +83,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
     rendered_image, radii = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_right
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_right
-    rendered_image_right, radii_right = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_back
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_back
-    rendered_image_back, radii_back = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_left
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_left
-    rendered_image_left, radii_left = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rendered_height, rendered_width = rendered_image_back.shape[1:3]
-    mid_width = rendered_width // 2
-    img_back_left = rendered_image_back[:, :, mid_width:]
-    img_back_right = rendered_image_back[:, :, :mid_width]
-    rendered_image = torch.cat([img_back_left, rendered_image_left, rendered_image, rendered_image_right, img_back_right], dim=2)
-    radii = radii + radii_back + radii_left + radii_right
 
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
     # They will be excluded from value updates used in the splitting criteria.
@@ -173,29 +158,18 @@ def render_panorama(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
         colors_precomp = override_color
 
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
-    rendered_image, radii = rasterizer(
-        means3D = means3D,
-        means2D = means2D,
-        shs = shs,
-        colors_precomp = colors_precomp,
-        opacities = opacity,
-        scales = scales,
-        rotations = rotations,
-        cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_right
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_right
+    rendered_image, radii = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
+    rasterizer.set_raster_viewproj(viewpoint_camera.world_view_transform_right, viewpoint_camera.full_proj_transform_right)
     rendered_image_right, radii_right = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_back
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_back
+    rasterizer.set_raster_viewproj(viewpoint_camera.world_view_transform_back, viewpoint_camera.full_proj_transform_back)
     rendered_image_back, radii_back = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rasterizer.viewmatrix = viewpoint_camera.world_view_transform_left
-    rasterizer.projmatrix = viewpoint_camera.full_proj_transform_left
+    rasterizer.set_raster_viewproj(viewpoint_camera.world_view_transform_left, viewpoint_camera.full_proj_transform_left)
     rendered_image_left, radii_left = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
     rendered_height, rendered_width = rendered_image_back.shape[1:3]
     mid_width = rendered_width // 2
     img_back_left = rendered_image_back[:, :, mid_width:]
     img_back_right = rendered_image_back[:, :, :mid_width]
-    rendered_image = torch.cat([img_back_left, rendered_image_left, rendered_image, rendered_image_right, img_back_right], dim=2)
+    rendered_image = torch.cat([img_back_right, rendered_image_left, rendered_image, rendered_image_right, img_back_left], dim=2)
     radii = radii + radii_back + radii_left + radii_right
 
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
