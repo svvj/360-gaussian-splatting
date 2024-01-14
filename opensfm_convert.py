@@ -6,7 +6,8 @@ import perspective_and_equirectangular.lib.multi_Perspec2Equirec as m_P2E
 import glob
 import argparse
 
-def panorama2cube4(input_dir,output_dir):
+def panorama2cube4(input_dir):
+    output_dir = input_dir + '_split/'
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
@@ -19,21 +20,21 @@ def panorama2cube4(input_dir,output_dir):
         equ = E2P.Equirectangular(all_image[index])    # Load equirectangular image
 
         img = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output1 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'front.jpg'
+        output1 = output_dir + os.path.splitext(os.path.basename(all_image[index]))[0] + 'front.jpg'
         cv2.imwrite(output1, img)
 
         img = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output2 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'right.jpg'
+        output2 = output_dir + os.path.splitext(os.path.basename(all_image[index]))[0] + 'right.jpg'
 
         cv2.imwrite(output2, img)
 
         img = equ.GetPerspective(90, 180, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output3 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'back.jpg'
+        output3 = output_dir + os.path.splitext(os.path.basename(all_image[index]))[0] + 'back.jpg'
 
         cv2.imwrite(output3, img)
 
         img = equ.GetPerspective(90, 270, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        output4 = output_dir + '/' + os.path.splitext(os.path.basename(all_image[index]))[0] + 'left.jpg'
+        output4 = output_dir + os.path.splitext(os.path.basename(all_image[index]))[0] + 'left.jpg'
 
         cv2.imwrite(output4, img)
 
@@ -52,7 +53,7 @@ def panorama2cube(input_dir,output_dir):
 
         out_img = output_dir + '/' + 'panorama' + os.path.basename(all_image[index])
 
-        img_front = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
+        img_0 = equ.GetPerspective(90, 0, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_right = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_left = equ.GetPerspective(90, -90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_back = equ.GetPerspective(90, 180, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
@@ -61,19 +62,18 @@ def panorama2cube(input_dir,output_dir):
         img_back_left = img_back[:, mid_width:width]
         img_back_right = img_back[:, :mid_width]
 
-        img = cv2.hconcat([img_back_left, img_left, img_front, img_right, img_back_right])
+        img = cv2.hconcat([img_back, img_left, img_0, img_right])
         cv2.imwrite(out_img, img)
 
 def main():
     parser = argparse.ArgumentParser(description="Convert equirectangular panorama to cube map.")
     parser.add_argument("input_dir", type=str, help="Input directory containing equirectangular images.")
-    parser.add_argument("output_dir", type=str, help="Output directory for cube map images.")
     parser.add_argument("--split", action='store_true', help="Split the panorama into 4 images (front, right, back, left)")
 
     args = parser.parse_args()
 
     if args.split:
-        panorama2cube4(args.input_dir, args.output_dir)
+        panorama2cube4(args.input_dir)
     else:
         panorama2cube(args.input_dir, args.output_dir)
 
