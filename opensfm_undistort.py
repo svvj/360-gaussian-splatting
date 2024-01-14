@@ -63,7 +63,7 @@ def undistort(data_dir):
             new_cam_info['height'] = h
             new_cameras[camera_name] = new_cam_info
             temp_json = {}
-            for camera_name in json_data[0]['cameras'].items():
+            for camera_name, camera_info in json_data[0]['cameras'].items():
                 temp_json[camera_name] = new_cameras[camera_name]
             json_data[0]['cameras'] = temp_json
             with open(data_dir + '/reconstruction.json', 'w') as outfile:
