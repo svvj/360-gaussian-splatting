@@ -136,8 +136,9 @@ def read_opensfm_intrinsics_split(reconstructions):
     Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
     """
     cameras = {}
+    cam_id = 4 # 0 ~ 3 are for panorama cameras
     for reconstruction in reconstructions:
-        for i, camera in enumerate(reconstruction["cameras"]):
+        for camera in reconstruction["cameras"]:
             if reconstruction["cameras"][camera]['projection_type'] == 'spherical' or reconstruction["cameras"][camera]['projection_type'] == 'equirectangular':
                 model = "SIMPLE_PINHOLE"
                 width = reconstruction["cameras"][camera]["width"] / 4
@@ -147,9 +148,22 @@ def read_opensfm_intrinsics_split(reconstructions):
                 orientation = ["front", "left", "back", "right"]
                 for j in range(len(orientation)):
                     camera_id = j
-                    cameras[camera_id] = Camera(id=j, model=model,
+                    cameras[camera_id] = Camera(id=camera_id, model=model,
                                                 width=width, height=height,
                                                 params=params, panorama=False)
+            elif reconstruction["cameras"][camera]['projection_type'] == "perspective":
+                model = "SIMPLE_PINHOLE"
+                width = reconstruction["cameras"][camera]["width"]
+                height = reconstruction["cameras"][camera]["height"]
+                f = reconstruction["cameras"][camera]["focal"]
+                k1 = reconstruction["cameras"][camera]["k1"]
+                k2 = reconstruction["cameras"][camera]["k2"]
+                params = np.array([f, width / 2, width / 2, k1, k2])
+                camera_id = cam_id
+                cameras[camera_id] = Camera(id=camera_id, model=model,
+                                            width=width, height=height,
+                                            params=params, panorama=False)
+                cam_id += 1
     return cameras
 
 def read_opensfm_intrinsics(reconstructions):
@@ -177,17 +191,33 @@ def read_opensfm_extrinsics_split(reconstructions):
     i = 0
     for reconstruction in reconstructions:
         for shot in reconstruction["shots"]:
-            translation = reconstruction["shots"][shot]["translation"]
-            rotation = reconstruction["shots"][shot]["rotation"]
-            qvec = angle_axis_to_quaternion(rotation)
-            tvec = np.array([translation[0], translation[1], translation[2]])
-            orientation = ["front", "left", "back", "right"]
-            for j in range(len(orientation)): 
+            if reconstruction["cameras"][reconstruction["shots"][shot]["camera"]]['projection_type'] == 'spherical' or reconstruction["cameras"][reconstruction["shots"][shot]["camera"]]['projection_type'] == 'equirectangular':
+                translation = reconstruction["shots"][shot]["translation"]
+                rotation = reconstruction["shots"][shot]["rotation"]
+                qvec = angle_axis_to_quaternion(rotation)
+                tvec = np.array([translation[0], translation[1], translation[2]])
+                orientation = ["front", "left", "back", "right"]
+                for j in range(len(orientation)): 
+                    image_id = i
+                    camera_id = j
+                    shot_with_orientation = os.path.splitext(shot)[0]
+                    image_name = shot_with_orientation + orientation[j] + ".jpg"
+                    xys = np.array([0, 0]) # dummy
+                    point3D_ids = np.array([0, 0]) # dummy
+                    images[image_id] = Image(
+                        id=image_id, qvec=qvec, tvec=tvec,
+                        camera_id=camera_id, name=image_name,
+                        xys=xys, point3D_ids=point3D_ids)
+                    i += 1
+            elif reconstruction["cameras"][reconstruction["shots"][shot]["camera"]]['projection_type'] == 'perspective':
+                translation = reconstruction["shots"][shot]["translation"]
+                rotation = reconstruction["shots"][shot]["rotation"]
+                qvec = angle_axis_to_quaternion(rotation)
+                tvec = np.array([translation[0], translation[1], translation[2]])
                 image_id = i
-                camera_id = j
+                camera_id =4#reconstruction["cameras"]["camera"]['projection_type']
                 shot_with_orientation = os.path.splitext(shot)[0]
-                image_name = shot_with_orientation + orientation[j] + ".jpg"
-                #qvec_split = quaternion_multiply(qvec, np.array([np.cos(math.pi/4 * j), 0, 0, np.sin(math.pi/4 * j)]))
+                image_name = shot
                 xys = np.array([0, 0]) # dummy
                 point3D_ids = np.array([0, 0]) # dummy
                 images[image_id] = Image(

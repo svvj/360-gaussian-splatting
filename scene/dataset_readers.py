@@ -158,9 +158,10 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
         image_name = os.path.basename(image_path).split(".")[0]
         image = Image.open(image_path)
         R_y = np.array([[ 0.0, 0.0,  1.0], [ 0.0,  1.0,  0.0], [ -1.0,  0.0,  0.0]])
-        for i in range(extr.camera_id):
-            R = np.matmul(R, R_y.transpose())
-            T = np.matmul(R_y.transpose(), T)
+        if extr.camera_id <= 3:
+            for i in range(extr.camera_id):
+                R = np.matmul(R, R_y.transpose())
+                T = np.matmul(R_y.transpose(), T)
 
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
                               image_path=image_path, image_name=image_name, width=width, height=height)
