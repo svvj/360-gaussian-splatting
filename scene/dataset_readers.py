@@ -333,7 +333,7 @@ def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
 
         reading_dir = "images" if images == None else images
         if panorama:
-            reading_dir = "images_pano"
+            reading_dir = "images_panorama"
             cam_extrinsics = read_opensfm_extrinsics(reconstruction)
             cam_intrinsics = read_opensfm_intrinsics(reconstruction)
         else:

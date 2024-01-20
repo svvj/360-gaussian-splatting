@@ -7,9 +7,11 @@ import glob
 import argparse
 
 def panorama2cube4(input_dir):
-    output_dir = input_dir + '_split/'
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    base_dir = os.path.basename(input_dir.rstrip('/\\'))
+    if not base_dir:
+        base_dir = 'images'
+
+    output_dir = os.path.join(input_dir, '..', base_dir + '_split')
 
     all_image = sorted(glob.glob(input_dir + '/*.*'))
     height, width = cv2.imread(all_image[0]).shape[:2]
@@ -38,10 +40,12 @@ def panorama2cube4(input_dir):
 
         cv2.imwrite(output4, img)
 
-def panorama2cube(input_dir,output_dir):
+def panorama2cube(input_dir):
+    base_dir = os.path.basename(input_dir.rstrip('/\\'))
+    if not base_dir:
+        base_dir = 'images'
 
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    output_dir = os.path.join(input_dir, '..', base_dir + '_panorama')  # 出力ディレクトリのパスを生成
 
     all_image = sorted(glob.glob(input_dir + '/*.*'))
     height, width = cv2.imread(all_image[0]).shape[:2]
@@ -57,12 +61,8 @@ def panorama2cube(input_dir,output_dir):
         img_right = equ.GetPerspective(90, 90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_left = equ.GetPerspective(90, -90, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
         img_back = equ.GetPerspective(90, 180, 0, cube_size, cube_size)  # Specify parameters(FOV, theta, phi, height, width)
-        height, width = img_back.shape[:2]
-        mid_width = width // 2
-        img_back_left = img_back[:, mid_width:width]
-        img_back_right = img_back[:, :mid_width]
 
-        img = cv2.hconcat([img_back, img_left, img_0, img_right])
+        img = cv2.hconcat([img_left, img_0, img_right, img_back])
         cv2.imwrite(out_img, img)
 
 def main():
@@ -75,7 +75,7 @@ def main():
     if args.split:
         panorama2cube4(args.input_dir)
     else:
-        panorama2cube(args.input_dir, args.output_dir)
+        panorama2cube(args.input_dir)
 
 if __name__ == "__main__":
     main()

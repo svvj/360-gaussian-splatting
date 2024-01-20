@@ -165,11 +165,10 @@ def render_panorama(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
     rendered_image_back, radii_back = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
     rasterizer.set_raster_viewproj(viewpoint_camera.world_view_transform_left, viewpoint_camera.full_proj_transform_left)
     rendered_image_left, radii_left = rasterizer(means3D = means3D, means2D = means2D, shs = shs, colors_precomp = colors_precomp, opacities = opacity, scales = scales, rotations = rotations, cov3D_precomp = cov3D_precomp)
-    rendered_height, rendered_width = rendered_image_back.shape[1:3]
-    mid_width = rendered_width // 2
-    img_back_left = rendered_image_back[:, :, mid_width:]
-    img_back_right = rendered_image_back[:, :, :mid_width]
-    rendered_image = torch.cat([img_back_right, rendered_image_left, rendered_image, rendered_image_right, img_back_left], dim=2)
+    rendered_image = torch.cat([rendered_image_right, rendered_image, rendered_image_left, rendered_image_back], dim=2)
+    if viewpoint_camera.oritinal_image_width !=  rendered_image.shape[2]:
+        rendered_image = torch.nn.functional.interpolate(rendered_image.unsqueeze(0), size=(viewpoint_camera.image_height, viewpoint_camera.oritinal_image_width), mode='bilinear', align_corners=False)
+        rendered_image = rendered_image.squeeze(0)
     radii = radii + radii_back + radii_left + radii_right
 
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
