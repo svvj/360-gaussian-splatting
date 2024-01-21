@@ -14,12 +14,14 @@ import collections
 import struct
 import math
 import os
+from pyproj import Proj
+
 CameraModel = collections.namedtuple(
     "CameraModel", ["model_id", "model_name", "num_params"])
 Camera = collections.namedtuple(
     "Camera", ["id", "model", "width", "height", "params", "panorama"])
 BaseImage = collections.namedtuple(
-    "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids"])
+    "Image", ["id", "qvec", "tvec", "camera_id", "name", "xys", "point3D_ids", "diff_ref"])
 Point3D = collections.namedtuple(
     "Point3D", ["id", "xyz", "rgb", "error", "image_ids", "point2D_idxs"])
 CAMERA_MODELS = {
@@ -117,11 +119,23 @@ def read_opensfm_points3D(reconstructions):
     rgbs = np.empty((num_points, 3))
     errors = np.empty((num_points, 1))
     count = 0
+    reference_lat_0 = reconstructions[0]["reference_lla"]["latitude"]
+    reference_lon_0 = reconstructions[0]["reference_lla"]["longitude"]
+    reference_alt_0 = reconstructions[0]["reference_lla"]["altitude"]
+    e2u_zone=int(divmod(reference_lon_0, 6)[0])+31
+    e2u_conv=Proj(proj='utm', zone=e2u_zone, ellps='WGS84')
+    reference_x_0, reference_y_0 = e2u_conv(reference_lon_0, reference_lat_0)
+    if reference_lat_0<0:
+        reference_y=reference_y+10000000
     for reconstruction in reconstructions:
+        reference_lat = reconstruction["reference_lla"]["latitude"]
+        reference_lon = reconstruction["reference_lla"]["longitude"]
+        reference_alt = reconstruction["reference_lla"]["altitude"]
+        reference_x, reference_y = e2u_conv(reference_lon, reference_lat)
         for i in (reconstruction["points"]):
             color = (reconstruction["points"][i]["color"])
             coordinates = (reconstruction["points"][i]["coordinates"])
-            xyz = np.array([coordinates[0], coordinates[1], coordinates[2]])
+            xyz = np.array([coordinates[0] + reference_x - reference_x_0, coordinates[1] + reference_y - reference_y_0, coordinates[2] - reference_alt + reference_alt_0])
             rgb = np.array([color[0], color[1], color[2]])
             error = np.array(0)
             xyzs[count] = xyz
@@ -171,9 +185,10 @@ def read_opensfm_intrinsics(reconstructions):
     Taken from https://github.com/colmap/colmap/blob/dev/scripts/python/read_write_model.py
     """
     cameras = {}
+    cam_id = 1
     for reconstruction in reconstructions:
         for i, camera in enumerate(reconstruction["cameras"]):
-            if reconstruction["cameras"][camera]['projection_type'] == 'spherical':
+            if reconstruction["cameras"][camera]['projection_type'] == 'spherical' or reconstruction["cameras"][camera]['projection_type'] == 'equirectangular':
                 camera_id = 0 # assume only one camera
                 model = "SPHERICAL"
                 width = reconstruction["cameras"][camera]["width"]
@@ -183,6 +198,19 @@ def read_opensfm_intrinsics(reconstructions):
                 cameras[camera_id] = Camera(id=camera_id, model=model,
                                             width=width, height=height,
                                             params=params, panorama=True)
+            elif reconstruction["cameras"][camera]['projection_type'] == "perspective":
+                model = "SIMPLE_PINHOLE"
+                width = reconstruction["cameras"][camera]["width"]
+                height = reconstruction["cameras"][camera]["height"]
+                f = reconstruction["cameras"][camera]["focal"]
+                k1 = reconstruction["cameras"][camera]["k1"]
+                k2 = reconstruction["cameras"][camera]["k2"]
+                params = np.array([f, width / 2, width / 2, k1, k2])
+                camera_id = cam_id
+                cameras[camera_id] = Camera(id=camera_id, model=model,
+                                            width=width, height=height,
+                                            params=params, panorama=False)
+                cam_id += 1
     return cameras
 
 
@@ -227,23 +255,67 @@ def read_opensfm_extrinsics_split(reconstructions):
                 i += 1
     return images
 
-def read_opensfm_extrinsics(reconstructions):
+def read_opensfm(reconstructions):
     images = {}
     i = 0
+    reference_lat_0 = reconstructions[0]["reference_lla"]["latitude"]
+    reference_lon_0 = reconstructions[0]["reference_lla"]["longitude"]
+    reference_alt_0 = reconstructions[0]["reference_lla"]["altitude"]
+    e2u_zone=int(divmod(reference_lon_0, 6)[0])+31
+    e2u_conv=Proj(proj='utm', zone=e2u_zone, ellps='WGS84')
+    reference_x_0, reference_y_0 = e2u_conv(reference_lon_0, reference_lat_0)
+    if reference_lat_0<0:
+        reference_y_0=reference_y_0+10000000
+    cameras = {}
+    camera_names = {}
+    cam_id = 1
     for reconstruction in reconstructions:
+        for i, camera in enumerate(reconstruction["cameras"]):
+            camera_name = camera
+            camera_info = reconstruction["cameras"][camera]
+            if camera_info['projection_type'] in ['spherical', 'equirectangular']:
+                camera_id = 0
+                model = "SPHERICAL"
+                width = reconstruction["cameras"][camera]["width"]
+                height = width / 4
+                f = 0
+                params = np.array([f, width , height])
+                cameras[camera_id] = Camera(id=camera_id, model=model, width=width, height=height, params=params, panorama=True)
+                camera_names[camera_name] = camera_id
+            elif reconstruction["cameras"][camera]['projection_type'] == "perspective":
+                model = "SIMPLE_PINHOLE"
+                width = reconstruction["cameras"][camera]["width"]
+                height = reconstruction["cameras"][camera]["height"]
+                f = reconstruction["cameras"][camera]["focal"] * width
+                k1 = reconstruction["cameras"][camera]["k1"]
+                k2 = reconstruction["cameras"][camera]["k2"]
+                params = np.array([f, width / 2, width / 2, k1, k2])
+                camera_id = cam_id
+                cameras[camera_id] = Camera(id=camera_id, model=model, width=width, height=height, params=params, panorama=False)
+                camera_names[camera_name] = camera_id
+                cam_id += 1
+    for reconstruction in reconstructions:
+        reference_lat = reconstruction["reference_lla"]["latitude"]
+        reference_lon = reconstruction["reference_lla"]["longitude"]
+        reference_alt = reconstruction["reference_lla"]["altitude"]
+        reference_x, reference_y = e2u_conv(reference_lon, reference_lat)
+        if reference_lat<0:
+            reference_y=reference_y+10000000
         for shot in reconstruction["shots"]:
             translation = reconstruction["shots"][shot]["translation"]
             rotation = reconstruction["shots"][shot]["rotation"]
             qvec = angle_axis_to_quaternion(rotation)
+            diff_ref_x = reference_x - reference_x_0
+            diff_ref_y = reference_y - reference_y_0
+            diff_ref_alt = reference_alt - reference_alt_0
             tvec = np.array([translation[0], translation[1], translation[2]])
-            camera_id = 0
+            diff_ref = np.array([diff_ref_x, diff_ref_y, diff_ref_alt])
+            camera_name = reconstruction["shots"][shot]["camera"] 
+            camera_id = camera_names.get(camera_name, 0)  # カメラ名からIDを取得
             image_id = i
-            image_name = 'panorama' + shot
-            xys = np.array([0, 0]) # dummy
+            image_name = shot
+            xys = np.array([0, 0]) # dummy 
             point3D_ids = np.array([0, 0]) # dummy
-            images[image_id] = Image(
-                id=image_id, qvec=qvec, tvec=tvec,
-                camera_id=camera_id, name=image_name,
-                xys=xys, point3D_ids=point3D_ids)
+            images[image_id] = Image(id=image_id, qvec=qvec, tvec=tvec, camera_id=camera_id, name=image_name, xys=xys, point3D_ids=point3D_ids, diff_ref=diff_ref)
             i += 1
-    return images
+    return cameras, images
