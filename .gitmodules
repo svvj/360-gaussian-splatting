@@ -8,6 +8,3 @@
 	path = perspective_and_equirectangular
 	url = https://github.com/inuex35/Perspective-and-Equirectangular.git
 	branch = for_gaussian_splatting
-[submodule "submodules/diff-gaussian-rasterization"]
-	path = submodules/diff-gaussian-rasterization
-	url = https://github.com/inuex35/360-diff-gaussian-rasterization
