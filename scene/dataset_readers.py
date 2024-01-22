@@ -127,6 +127,7 @@ def qvec2rotmat(qvec):
 
 def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_folder):
     cam_infos = []
+    mask_count = 0
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
         # the exact output you're looking for:
@@ -137,7 +138,6 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_fold
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
-        mask_count = 0
         uid = intr.id
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
