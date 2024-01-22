@@ -32,7 +32,9 @@ class CameraInfo(NamedTuple):
     FovY: np.array
     FovX: np.array
     image: np.array
+    mask: np.array
     image_path: str
+    mask_path: str
     image_name: str
     width: int
     height: int
@@ -123,7 +125,7 @@ def qvec2rotmat(qvec):
          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
 
-def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_folder):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
@@ -135,7 +137,7 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
-
+        mask_count = 0
         uid = intr.id
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
@@ -159,8 +161,21 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
-        image_name = os.path.basename(image_path).split(".")[0]
+        image_name = extr.name
         image = Image.open(image_path)
+
+        mask = None
+        mask_path = None
+        if masks_folder is not None and masks_folder != "":
+            possible_mask_path = os.path.join(masks_folder, "{}.png".format(extr.name))
+            if os.path.exists(possible_mask_path):
+                mask = Image.open(possible_mask_path)
+                assert mask.size == image.size, "image dimension {} doesn't match to the mask {}".format(
+                    image.size,
+                    mask.size,
+                )
+                mask_path = possible_mask_path
+                mask_count += 1
         R_y = np.array([[ 0.0, 0.0,  1.0, 0.0], [ 0.0,  1.0,  0.0, 0.0], [ -1.0,  0.0,  0.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
         """
         if extr.camera_id <= 3:
@@ -183,9 +198,13 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
         c2w_tmp[:3, 3] = c2w_tmp[:3, 3] + extr.diff_ref
         R = c2w_tmp[:3, :3]
         T = np.linalg.inv(c2w_tmp)[:3, 3]
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height, panorama=panorama)
+
+        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask,
+                              image_path=image_path, mask_path=mask_path, image_name=image_name, width=width, height=height, panorama=panorama)
         cam_infos.append(cam_info)
+    if masks_folder != "":
+        sys.stdout.write('\n')
+        sys.stdout.write("Read {} masks".format(mask_count))
     sys.stdout.write('\n')
     return cam_infos
 
@@ -339,7 +358,7 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
+def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8, masks=None):
     reconstruction_file = os.path.join(path, 'reconstruction.json')
     with open(reconstruction_file) as f:
         reconstruction = json.load(f)
@@ -352,7 +371,7 @@ def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
             reading_dir = "images_split"
             cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
             cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
-        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), masks_folder=masks)
         cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
         if eval:
