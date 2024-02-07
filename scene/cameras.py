@@ -85,7 +85,6 @@ class Camera(nn.Module):
 
     def rotate_camera_coordinate(self, R, T):
         R_y = np.array([[ 0.0, 0.0,  1.0, 0.0], [ 0.0,  1.0,  0.0, 0.0], [ -1.0,  0.0,  0.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
-        R_z = np.array([[ 0.0, -1.0,  0.0, 0.0], [ 1.0, 0.0,  0.0, 0.0], [ 0.0,  0.0,  1.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
 
         Rt = np.zeros((4, 4)) # w2c
         Rt[:3, :3] = R.transpose() 
