@@ -39,10 +39,13 @@ data/your_data/reconstruction.json
 ```
 
 Next, convert the images from equirectangular to cubemap format excluding the top and bottom, using the following command. Do not forget to save the original images in another location as this command overwrites them.
-
 ```bash
 python3 opensfm_convert.py data/your_data/images/
 ```
+![image_masked_person](https://github.com/inuex35/360-gaussian-splatting/assets/129066540/e651dd31-880d-4f73-af52-cd025e9aeac5)
+To
+![image](https://github.com/inuex35/360-gaussian-splatting/assets/129066540/35e91f56-b093-4ba4-92d6-5e76b3023bd6)
+
 
 Then, start the training with the following command:
 
