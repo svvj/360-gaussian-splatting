@@ -31,8 +31,11 @@ bin/opensfm_run_all your_data
 
 Make sure the camera model is set to spherical. It is possible to use both spherical and perspective camera models simultaneously.
 
-After reconstruction, a `reconstruction.json` file will be generated. Assuming you are creating directories within `data`, place them as follows:
+After reconstruction, a `reconstruction.json` file will be generated. You can use opensfm viewer for visualization.
+![image](https://github.com/inuex35/360-gaussian-splatting/assets/129066540/d34379f9-1e88-49e5-8feb-315199082e8b)
 
+
+Assuming you are creating directories within `data`, place them as follows:
 ```
 data/your_data/images/*jpg
 data/your_data/reconstruction.json
@@ -46,6 +49,7 @@ python3 opensfm_convert.py data/your_data/images/
 To
 ![image](https://github.com/inuex35/360-gaussian-splatting/assets/129066540/35e91f56-b093-4ba4-92d6-5e76b3023bd6)
 
+https://github.com/inuex35/360-gaussian-splatting/assets/129066540/0ea2e017-37ee-4cbd-9ce1-f6592d64fb02
 
 Then, start the training with the following command:
 
@@ -54,3 +58,5 @@ python3 train.py -s data/your_data --panorama
 ```
 
 After training, results will be saved in the `output` directory. For training parameters and more details, refer to the Gaussian Splatting repository.
+
+
