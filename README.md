@@ -49,8 +49,6 @@ python3 opensfm_convert.py data/your_data/images/
 To
 ![image](https://github.com/inuex35/360-gaussian-splatting/assets/129066540/35e91f56-b093-4ba4-92d6-5e76b3023bd6)
 
-https://github.com/inuex35/360-gaussian-splatting/assets/129066540/0ea2e017-37ee-4cbd-9ce1-f6592d64fb02
-
 Then, start the training with the following command:
 
 ```bash
@@ -59,4 +57,5 @@ python3 train.py -s data/your_data --panorama
 
 After training, results will be saved in the `output` directory. For training parameters and more details, refer to the Gaussian Splatting repository.
 
+https://github.com/inuex35/360-gaussian-splatting/assets/129066540/0ea2e017-37ee-4cbd-9ce1-f6592d64fb02
 
