@@ -59,3 +59,19 @@ After training, results will be saved in the `output` directory. For training pa
 
 https://github.com/inuex35/360-gaussian-splatting/assets/129066540/0ea2e017-37ee-4cbd-9ce1-f6592d64fb02
 
+
+## Training parameter
+
+
+Parameters for 360 Gaussian Splatting are provided with default values in 360-gaussian-splatting/arguments/__init__.py.
+
+According to the original repository, it might be beneficial to adjust position_lr_init, position_lr_final, and scaling_lr.
+
+Reducing densify_grad_threshold can increase the number of splats, but it will also increase VRAM usage.
+
+densify_from_iter and densify_until_iter are also related to densification.
+
+
+
+
+
