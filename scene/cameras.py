@@ -61,10 +61,10 @@ class Camera(nn.Module):
         self.camera_center = self.world_view_transform.inverse()[3, :3]
         self.panorama = panorama
         if panorama:
-            self.image_width = self.original_image.shape[2] // 4
-            self.oritinal_image_width = self.original_image.shape[2] # for low resolution
+            #self.image_width = self.original_image.shape[2] // 4
+            #self.oritinal_image_width = self.original_image.shape[2] # for low resolution
 
-            self.image_height = self.original_image.shape[1]
+            #self.image_height = self.original_image.shape[1]
             R_r, T_r = self.rotate_camera_coordinate(R, T)
 
             self.world_view_transform_right = torch.tensor(getWorld2View2(R_r, T_r, trans, scale)).transpose(0, 1).cuda()

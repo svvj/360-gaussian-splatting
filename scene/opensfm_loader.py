@@ -277,8 +277,8 @@ def read_opensfm(reconstructions):
                 camera_id = 0
                 model = "SPHERICAL"
                 width = reconstruction["cameras"][camera]["width"]
-                height = width / 4
-                f = 0
+                height = reconstruction["cameras"][camera]["height"]
+                f = width / 4 / 2# assume fov = 90
                 params = np.array([f, width , height])
                 cameras[camera_id] = Camera(id=camera_id, model=model, width=width, height=height, params=params, panorama=True)
                 camera_names[camera_name] = camera_id
