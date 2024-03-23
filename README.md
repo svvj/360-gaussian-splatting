@@ -41,6 +41,8 @@ data/your_data/images/*jpg
 data/your_data/reconstruction.json
 ```
 
+## Updated! We don't need to convert to cubemap, we can render equirectangular directly! Wait for updating README and repository
+
 Next, convert the images from equirectangular to cubemap format excluding the top and bottom, using the following command. Do not forget to save the original images in another location as this command overwrites them.
 ```bash
 python3 opensfm_convert.py data/your_data/images/
