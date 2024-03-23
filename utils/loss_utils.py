@@ -13,9 +13,18 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
+import numpy as np
 
-def l1_loss(network_output, gt):
-    return torch.abs((network_output - gt)).mean()
+def latitude_weight(height):
+    y = torch.arange(height).float()
+    latitude = (y / height - 0.5) * np.pi
+    weight = torch.cos(latitude)
+    return weight.unsqueeze(-1).unsqueeze(0).expand(3, -1, -1)
+
+def l1_loss(network_output, gt, weights=None):
+    if weights is None:
+        weights = torch.ones_like(gt)
+    return torch.abs((network_output - gt) * weights).mean()
 
 def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
@@ -30,13 +39,19 @@ def create_window(window_size, channel):
     window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
     return window
 
-def ssim(img1, img2, window_size=11, size_average=True):
+def ssim(img1, img2, window_size=11, size_average=True, weights=None):
     channel = img1.size(-3)
     window = create_window(window_size, channel)
-
+    
     if img1.is_cuda:
         window = window.cuda(img1.get_device())
     window = window.type_as(img1)
+    
+    if weights is None:
+        weights = torch.ones_like(img1)
+    
+    img1 = img1 * weights
+    img2 = img2 * weights
 
     return _ssim(img1, img2, window, window_size, channel, size_average)
 

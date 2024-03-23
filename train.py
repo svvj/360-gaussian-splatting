@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim
+from utils.loss_utils import l1_loss, ssim, latitude_weight
 from gaussian_renderer import render, render_panorama, render_spherical, network_gui
 import sys
 from scene import Scene, GaussianModel
@@ -76,6 +76,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         if not viewpoint_stack:
             viewpoint_stack = scene.getTrainCameras().copy()
         viewpoint_cam = viewpoint_stack.pop(randint(0, len(viewpoint_stack)-1))
+        weights = latitude_weight(viewpoint_cam.image_height).to("cuda")
 
         # Render
         if (iteration - 1) == debug_from:
@@ -94,8 +95,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         if mask is not None:
             mask = mask.cuda()
             gt_image[mask] = image.detach()[mask]
-        Ll1 = l1_loss(image, gt_image)
-        loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+        if viewpoint_cam.panorama:
+            Ll1 = l1_loss(image, gt_image, weights=weights)
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, weights=weights))
+        else:
+            Ll1 = l1_loss(image, gt_image)
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
         loss.backward()
 
         iter_end.record()
@@ -208,11 +213,11 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=6009)
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[100, 1100, 3000, 5000, 10_000, 10_100, 20_000, 30_000, 30_100, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000, 110_000, 120_000, 130_000, 140_000, 150_000, 160_000, 170_000, 180_000, 190_000, 200_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[100, 1100, 3000, 5000, 10_000, 10_100, 20_000, 30_000, 30_100, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000, 110_000, 120_000, 130_000, 140_000, 150_000, 160_000, 170_000, 180_000, 190_000, 200_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[10_000, 20_000, 30_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[10_000, 20_000, 30_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--panorama", action="store_true")
-    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[100, 1100, 3000, 5000, 10_000, 10_100, 20_000, 30_100, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000, 110_000, 120_000, 130_000, 140_000, 150_000, 160_000, 170_000, 180_000, 190_000, 200_000])
+    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[10_000, 20_000, 30_000])
     parser.add_argument("--start_checkpoint", type=str, default = None)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
