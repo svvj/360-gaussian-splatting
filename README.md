@@ -17,7 +17,7 @@ https://www.buymeacoffee.com/inuex35.
 Clone the repository with the following command:
 
 ```bash
-git clone --recursive -b render_from_panorama_and_multiple_reconstruction https://github.com/inuex35/360-gaussian-splatting
+git clone --recursive https://github.com/inuex35/360-gaussian-splatting
 ```
 
 ### Creating the Environment
