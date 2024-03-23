@@ -15,7 +15,7 @@ from PIL import Image
 from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
-from scene.opensfm_loader import read_opensfm_extrinsics_split, read_opensfm_extrinsics, read_opensfm_intrinsics_split, read_opensfm_intrinsics, qvec2rotmat, read_opensfm_points3D
+from scene.opensfm_loader import read_opensfm_extrinsics_split, read_opensfm, read_opensfm_intrinsics_split, qvec2rotmat, read_opensfm_points3D
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
 import numpy as np
 import json
@@ -32,10 +32,13 @@ class CameraInfo(NamedTuple):
     FovY: np.array
     FovX: np.array
     image: np.array
+    mask: np.array
     image_path: str
+    mask_path: str
     image_name: str
     width: int
     height: int
+    panorama: bool
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -122,8 +125,9 @@ def qvec2rotmat(qvec):
          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
 
-def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_folder):
     cam_infos = []
+    mask_count = 0
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
         # the exact output you're looking for:
@@ -134,7 +138,6 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
         intr = cam_intrinsics[extr.camera_id]
         height = intr.height
         width = intr.width
-
         uid = intr.id
         R = np.transpose(qvec2rotmat(extr.qvec))
         T = np.array(extr.tvec)
@@ -143,21 +146,38 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
+            panorama = False
         elif intr.model=="PINHOLE":
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
             FovX = focal2fov(focal_length_x, width)
+            panorama = False
         elif intr.model=="SPHERICAL":
             FovY = math.pi / 2
             FovX = math.pi / 2 # just for calculation
+            panorama = True
         else:
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
-        image_name = os.path.basename(image_path).split(".")[0]
+        image_name = extr.name
         image = Image.open(image_path)
+
+        mask = None
+        mask_path = None
+        if masks_folder is not None and masks_folder != "":
+            possible_mask_path = os.path.join(masks_folder, "{}.png".format(extr.name))
+            if os.path.exists(possible_mask_path):
+                mask = Image.open(possible_mask_path)
+                assert mask.size == image.size, "image dimension {} doesn't match to the mask {}".format(
+                    image.size,
+                    mask.size,
+                )
+                mask_path = possible_mask_path
+                mask_count += 1
         R_y = np.array([[ 0.0, 0.0,  1.0, 0.0], [ 0.0,  1.0,  0.0, 0.0], [ -1.0,  0.0,  0.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
+        """
         if extr.camera_id <= 3:
             for i in range(extr.camera_id):
                 Rt = np.zeros((4, 4)) # w2c
@@ -169,10 +189,22 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder):
                 # RT_c2w = np.matmul(c2w_tmp, R_y.transpose())
                 R = RT_c2w[:3, :3]
                 T = np.linalg.inv(RT_c2w)[:3, 3]
+        """
+        Rt = np.zeros((4, 4)) # w2c
+        Rt[:3, :3] = R.transpose() 
+        Rt[:3, 3] = T
+        Rt[3, 3] = 1.0  
+        c2w_tmp = np.linalg.inv(Rt) # c2w
+        c2w_tmp[:3, 3] = c2w_tmp[:3, 3] + extr.diff_ref
+        R = c2w_tmp[:3, :3]
+        T = np.linalg.inv(c2w_tmp)[:3, 3]
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
+        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask,
+                              image_path=image_path, mask_path=mask_path, image_name=image_name, width=width, height=height, panorama=panorama)
         cam_infos.append(cam_info)
+    if masks_folder != "":
+        sys.stdout.write('\n')
+        sys.stdout.write("Read {} masks".format(mask_count))
     sys.stdout.write('\n')
     return cam_infos
 
@@ -326,21 +358,20 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
+def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8, masks=None):
     reconstruction_file = os.path.join(path, 'reconstruction.json')
     with open(reconstruction_file) as f:
         reconstruction = json.load(f)
 
         reading_dir = "images" if images == None else images
         if panorama:
-            reading_dir = "images_panorama"
-            cam_extrinsics = read_opensfm_extrinsics(reconstruction)
-            cam_intrinsics = read_opensfm_intrinsics(reconstruction)
+            reading_dir = "images"
+            cam_intrinsics, cam_extrinsics = read_opensfm(reconstruction)
         else:
             reading_dir = "images_split"
             cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
             cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
-        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
+        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), masks_folder=masks)
         cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
         if eval:
@@ -349,8 +380,8 @@ def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8):
         else:
             train_cam_infos = cam_infos
             test_cam_infos = []
-
         nerf_normalization = getNerfppNorm(train_cam_infos)
+
 
         ply_path = os.path.join(path, "reconstruction.ply")
         xyz, rgb, _ = read_opensfm_points3D(reconstruction)

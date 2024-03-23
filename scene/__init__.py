@@ -41,12 +41,12 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(args.source_path, "sparse")):
-            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, panorama)
+            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, panorama, masks=args.masks)
         if os.path.exists(os.path.join(args.source_path, "reconstruction.json")):
-            scene_info = sceneLoadTypeCallbacks["Opensfm"](args.source_path, args.images, args.eval, panorama)
+            scene_info = sceneLoadTypeCallbacks["Opensfm"](args.source_path, args.images, args.eval, panorama, masks=args.masks)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
-            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, panorama)
+            scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, panorama, masks=args.masks)
         else:
             assert False, "Could not recognize scene type!"
 

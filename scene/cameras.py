@@ -15,7 +15,7 @@ import numpy as np
 from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 
 class Camera(nn.Module):
-    def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
+    def __init__(self, colmap_id, R, T, FoVx, FoVy, image, mask, gt_alpha_mask,
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", panorama=False
                  ):
@@ -39,7 +39,11 @@ class Camera(nn.Module):
         self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
         self.image_width = self.original_image.shape[2]
         self.image_height = self.original_image.shape[1]
-
+        self.raw_mask = mask
+        self.is_masked = None
+        if mask is not None:
+            self.is_masked = (mask == 0).expand(*image.shape)  # True represent masked pixel
+            
         if gt_alpha_mask is not None:
             self.original_image *= gt_alpha_mask.to(self.data_device)
         else:
@@ -55,11 +59,12 @@ class Camera(nn.Module):
         self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
+        self.panorama = panorama
         if panorama:
-            self.image_width = self.original_image.shape[2] // 4
-            self.oritinal_image_width = self.original_image.shape[2] # for low resolution
+            #self.image_width = self.original_image.shape[2] // 4
+            #self.oritinal_image_width = self.original_image.shape[2] # for low resolution
 
-            self.image_height = self.original_image.shape[1]
+            #self.image_height = self.original_image.shape[1]
             R_r, T_r = self.rotate_camera_coordinate(R, T)
 
             self.world_view_transform_right = torch.tensor(getWorld2View2(R_r, T_r, trans, scale)).transpose(0, 1).cuda()
@@ -80,7 +85,6 @@ class Camera(nn.Module):
 
     def rotate_camera_coordinate(self, R, T):
         R_y = np.array([[ 0.0, 0.0,  1.0, 0.0], [ 0.0,  1.0,  0.0, 0.0], [ -1.0,  0.0,  0.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
-        R_z = np.array([[ 0.0, -1.0,  0.0, 0.0], [ 1.0, 0.0,  0.0, 0.0], [ 0.0,  0.0,  1.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
 
         Rt = np.zeros((4, 4)) # w2c
         Rt[:3, :3] = R.transpose() 
