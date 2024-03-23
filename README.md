@@ -3,6 +3,13 @@
 
 This repository contains programs for reconstructing space using OpenSfM and Gaussian Splatting. For original repositories of OpenSfM and Gaussian Splatting, please refer to the links provided.
 
+# Support me
+This is just my personal project.
+If you've enjoyed using this project and found it helpful, 
+I'd be incredibly grateful if you could chip in a few bucks to help cover the costs of running the GPU server. 
+You can easily do this by buying me a coffee at 
+https://www.buymeacoffee.com/inuex35. 
+
 ## Environment Setup
 
 ### Cloning the Repository
@@ -72,8 +79,6 @@ According to the original repository, it might be beneficial to adjust position_
 Reducing densify_grad_threshold can increase the number of splats, but it will also increase VRAM usage.
 
 densify_from_iter and densify_until_iter are also related to densification.
-
-
 
 
 
