@@ -25,7 +25,7 @@ git clone --recursive https://github.com/inuex35/360-gaussian-splatting
 In addition to the original repository, install the following module as well:
 
 ```bash
-pip3 install pyproj
+pip3 install submodules/diff-gaussian-rasterization submodules/simple-knn plyfile pyproj
 ```
 
 ## Training 360 Gaussian Splatting
