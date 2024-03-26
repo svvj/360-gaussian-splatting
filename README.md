@@ -31,6 +31,7 @@ pip3 install submodules/diff-gaussian-rasterization submodules/simple-knn plyfil
 ## Training 360 Gaussian Splatting
 
 First, generate point clouds using images from a 360-degree camera with OpenSfM. Refer to the following repository and use this command for reconstruction:
+Visit https://github.com/inuex35/ind-bermuda-opensfm and opensfm documentation for more detail.
 
 ```bash
 bin/opensfm_run_all your_data
