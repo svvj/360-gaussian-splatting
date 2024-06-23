@@ -81,5 +81,8 @@ Reducing densify_grad_threshold can increase the number of splats, but it will a
 
 densify_from_iter and densify_until_iter are also related to densification.
 
+You should use small densify_grad_threshold like 0.00002 for equirectangular.
+
+
 
 
