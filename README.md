@@ -1,6 +1,14 @@
 
 # 360 Gaussian Splatting
 
+<div align="center">
+  
+  <a href="https://www.youtube.com/watch?v=AhWHeEB8-vc">
+    <img src="https://github.com/inuex35/360-gaussian-splatting/assets/129066540/25cb8760-0709-445d-a535-9885ba2786b7" width="640" alt="360 gaussian splatting with spherical render">
+  </a>
+  
+</div>
+
 This repository contains programs for reconstructing space using OpenSfM and Gaussian Splatting. For original repositories of OpenSfM and Gaussian Splatting, please refer to the links provided.
 
 # Support me
@@ -56,19 +64,6 @@ python3 train.py -s data/your_data --panorama
 ```
 
 After training, results will be saved in the `output` directory. For training parameters and more details, refer to the Gaussian Splatting repository.
-
-<div align="center">
-  
-  <a href="https://www.youtube.com/watch?v=AhWHeEB8-vc">
-    <img src="https://github.com/inuex35/360-gaussian-splatting/assets/129066540/25cb8760-0709-445d-a535-9885ba2786b7" width="640" alt="360 gaussian splatting with spherical render">
-  </a>
-  
-</div>
-
-<div align="center">
-This is YouTube Link, click this gif image.
-</div>
-
 
 ## Training parameter
 
