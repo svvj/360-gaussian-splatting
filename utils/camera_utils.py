@@ -55,23 +55,33 @@ def loadCam(args, id, cam_info, resolution_scale, panorama=False):
         preview_save_path = os.path.join(args.model_path, "mask_preview", cam_info.image_name.replace("/", "_"))
         os.makedirs(os.path.dirname(preview_save_path), exist_ok=True)
         torchvision.utils.save_image(masked_preview, preview_save_path)
+
     gt_image = resized_image_rgb[:3, ...]
     loaded_mask = None
 
     if resized_image_rgb.shape[1] == 4:
         loaded_mask = resized_image_rgb[3:4, ...]
 
+    resized_normal = None
+    if cam_info.normal is not None:
+        resized_normal = PILtoTorch(cam_info.normal, resolution)
+
+    resized_depth = None
+    if cam_info.depth is not None:
+        resized_depth = PILtoTorch(cam_info.depth, resolution)
+
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 
-                  image=gt_image, mask=resized_mask, gt_alpha_mask=loaded_mask,
+                  image=gt_image, depth=resized_depth, normal=resized_normal, mask=resized_mask, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device, panorama=cam_info.panorama)
+
 
 def cameraList_from_camInfos(cam_infos, resolution_scale, args, panorama=False):
     camera_list = []
     with tqdm(enumerate(cam_infos), total=len(cam_infos)) as t:
         for id, c in t:
             t.set_description("{}".format(c.image_name))
-            camera_list.append(loadCam(args, id, c, resolution_scale))
+            camera_list.append(loadCam(args, id, c, resolution_scale, panorama=panorama))
     return camera_list
 
 def camera_to_JSON(id, camera : Camera):

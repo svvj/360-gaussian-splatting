@@ -13,15 +13,40 @@ from gaussian_renderer import GaussianModel
 def render_set(model_path, name, iteration, views, gaussians, pipeline, background):
     render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
     gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
+    normals_path = os.path.join(model_path, name, "ours_{}".format(iteration), "normals")
+    depths_path = os.path.join(model_path, name, "ours_{}".format(iteration), "depths")
 
     makedirs(render_path, exist_ok=True)
     makedirs(gts_path, exist_ok=True)
+    makedirs(normals_path, exist_ok=True)
+    makedirs(depths_path, exist_ok=True)
 
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
-        rendering = render_spherical(view, gaussians, pipeline, background)["render"]
+        rendering_result = render_spherical(view, gaussians, pipeline, background)
+        
+        rendering, depths, normals, alpha, radii, extra = (rendering_result["render"],
+                                                           rendering_result.get("depths", None),
+                                                           rendering_result.get("normals", None),
+                                                           rendering_result.get("alpha", None),
+                                                           rendering_result.get("radii", None),
+                                                           rendering_result.get("extra", None))
+
+        print(f"Rendering result for view {idx}:")
+        print("Rendered image:", rendering)
+        print("Depths:", depths)
+        print("Normals:", normals)
+        print("Alpha:", alpha)
+        print("Radii:", radii)
+        print("Extra:", extra)
+        
         gt = view.original_image[0:3, :, :]
+
         torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + ".png"))
         torchvision.utils.save_image(gt, os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))
+        if normals is not None:
+            torchvision.utils.save_image(normals, os.path.join(normals_path, '{0:05d}'.format(idx) + ".png"))
+        if depths is not None:
+            torchvision.utils.save_image(depths, os.path.join(depths_path, '{0:05d}'.format(idx) + ".png"))
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     with torch.no_grad():
@@ -53,4 +78,3 @@ if __name__ == "__main__":
     safe_state(args.quiet)
 
     render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test)
-

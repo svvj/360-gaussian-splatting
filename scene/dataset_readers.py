@@ -24,6 +24,7 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 import math
+from utils.system_utils import read_exr_image
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -32,10 +33,14 @@ class CameraInfo(NamedTuple):
     FovY: np.array
     FovX: np.array
     image: np.array
+    normal: np.array
+    depth: np.array
     mask: np.array
     image_path: str
     mask_path: str
     image_name: str
+    normal_name: str
+    depth_name: str
     width: int
     height: int
     panorama: bool
@@ -125,7 +130,7 @@ def qvec2rotmat(qvec):
          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
 
-def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_folder):
+def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, normals_folder=None, depths_folder=None, masks_folder=None):
     cam_infos = []
     mask_count = 0
     for idx, key in enumerate(cam_extrinsics):
@@ -161,8 +166,26 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_fold
             assert False, "Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!"
 
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
-        image_name = extr.name
+        image_name = os.path.splitext(extr.name)[0]
         image = Image.open(image_path)
+
+        base_name = image_name.replace("FinalColor", "")
+
+        normal = None
+        normal_name = None
+        if normals_folder:
+            normal_path = os.path.join(normals_folder, base_name + "WorldNormal.png")
+            if os.path.exists(normal_path):
+                normal = Image.open(normal_path)
+                normal_name = normal_path
+
+        depth = None
+        depth_name = None
+        if depths_folder:
+            depth_path = os.path.join(depths_folder, base_name + "SceneDepth.exr")
+            if os.path.exists(depth_path):
+                depth = read_exr_image(depth_path)
+                depth_name = depth_path
 
         mask = None
         mask_path = None
@@ -199,14 +222,19 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, masks_fold
         R = c2w_tmp[:3, :3]
         T = np.linalg.inv(c2w_tmp)[:3, 3]
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask,
-                              image_path=image_path, mask_path=mask_path, image_name=image_name, width=width, height=height, panorama=panorama)
+        cam_info = CameraInfo(
+            uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image, mask=mask,
+            normal=normal, depth=depth, image_path=image_path, mask_path=mask_path,
+            image_name=image_name, normal_name=normal_name, depth_name=depth_name,
+            width=width, height=height, panorama=panorama
+        )
         cam_infos.append(cam_info)
     if masks_folder != "":
         sys.stdout.write('\n')
         sys.stdout.write("Read {} masks".format(mask_count))
     sys.stdout.write('\n')
     return cam_infos
+
 
 def fetchPly(path):
     plydata = PlyData.read(path)
@@ -358,20 +386,25 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png"):
                            ply_path=ply_path)
     return scene_info
 
-def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8, masks=None):
+def readOpensfmSceneInfo(path, images, eval, panorama, depth, normal, llffhold=8, masks=None):
     reconstruction_file = os.path.join(path, 'reconstruction.json')
     with open(reconstruction_file) as f:
         reconstruction = json.load(f)
-
+        normal_dir = ""
+        depth_dir = ""
         reading_dir = "images" if images == None else images
         if panorama:
             reading_dir = "images"
+            if normal:
+                normal_dir = "normals"
+            if depth:
+                depth_dir = "depths"
             cam_intrinsics, cam_extrinsics = read_opensfm(reconstruction)
         else:
             reading_dir = "images_split"
             cam_extrinsics = read_opensfm_extrinsics_split(reconstruction)
             cam_intrinsics = read_opensfm_intrinsics_split(reconstruction)
-        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), masks_folder=masks)
+        cam_infos_unsorted = readOpensfmCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir), normals_folder=os.path.join(path, normal_dir), depths_folder=os.path.join(path, depth_dir), masks_folder=masks)
         cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
         if eval:
@@ -391,11 +424,13 @@ def readOpensfmSceneInfo(path, images, eval, panorama, llffhold=8, masks=None):
         except:
             pcd = None
 
-        scene_info = SceneInfo(point_cloud=pcd,
-                            train_cameras=train_cam_infos,
-                            test_cameras=test_cam_infos,
-                            nerf_normalization=nerf_normalization,
-                            ply_path=ply_path)
+        scene_info = SceneInfo(
+            point_cloud=pcd,
+            train_cameras=train_cam_infos,
+            test_cameras=test_cam_infos,
+            nerf_normalization=nerf_normalization,
+            ply_path=ply_path
+        )
     return scene_info
 
 sceneLoadTypeCallbacks = {
