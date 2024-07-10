@@ -176,7 +176,7 @@ def readOpensfmCameras(cam_extrinsics, cam_intrinsics, images_folder, normals_fo
         if normals_folder:
             normal_path = os.path.join(normals_folder, base_name + "WorldNormal.png")
             if os.path.exists(normal_path):
-                normal = Image.open(normal_path)
+                normal = Image.open(normal_path).convert("RGB")
                 normal_name = normal_path
 
         depth = None

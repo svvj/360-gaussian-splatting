@@ -26,6 +26,36 @@ def l1_loss(network_output, gt, weights=None):
         weights = torch.ones_like(gt)
     return torch.abs((network_output - gt) * weights).mean()
 
+def total_variation_loss(image):
+    """
+    Calculate the total variation loss for an image.
+    
+    Args:
+        image (torch.Tensor): Input image tensor with shape (batch_size, channels, height, width) or (channels, height, width).
+    
+    Returns:
+        torch.Tensor: Total variation loss.
+    """
+    if image.dim() == 4:
+        # Calculate the difference between adjacent pixel values in the horizontal direction
+        loss_h = torch.mean(torch.abs(image[:, :, :-1, :] - image[:, :, 1:, :]))
+        
+        # Calculate the difference between adjacent pixel values in the vertical direction
+        loss_v = torch.mean(torch.abs(image[:, :, :, :-1] - image[:, :, :, 1:]))
+    elif image.dim() == 3:
+        # Calculate the difference between adjacent pixel values in the horizontal direction
+        loss_h = torch.mean(torch.abs(image[:, :-1, :] - image[:, 1:, :]))
+        
+        # Calculate the difference between adjacent pixel values in the vertical direction
+        loss_v = torch.mean(torch.abs(image[:, :, :-1] - image[:, :, 1:]))
+    else:
+        raise ValueError("Unsupported tensor dimension: {}".format(image.dim()))
+    
+    # Sum the horizontal and vertical losses
+    loss = loss_h + loss_v
+    
+    return loss
+
 def l2_loss(network_output, gt):
     return ((network_output - gt) ** 2).mean()
 

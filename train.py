@@ -12,7 +12,7 @@
 import os
 import torch
 from random import randint
-from utils.loss_utils import l1_loss, ssim, latitude_weight
+from utils.loss_utils import l1_loss, ssim, total_variation_loss, latitude_weight
 from gaussian_renderer import render, render_panorama, render_spherical, network_gui
 import sys
 from scene import Scene, GaussianModel
@@ -87,17 +87,24 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             render_pkg = render_spherical(viewpoint_cam, gaussians, pipe, bg)
         else:
             render_pkg = render(viewpoint_cam, gaussians, pipe, bg)
-        image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
+        image, normal, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["normals"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
+        try:
+            gt_normal = viewpoint_cam.normal.cuda()
+        except:
+            continue
+            
         mask = viewpoint_cam.is_masked
         if mask is not None:
             mask = mask.cuda()
             gt_image[mask] = image.detach()[mask]
         if viewpoint_cam.panorama:
             Ll1 = l1_loss(image, gt_image, weights=weights)
-            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, weights=weights))
+            Ll1_normal = l1_loss(normal, gt_normal, weights=weights)
+            tv_loss_normal = total_variation_loss(normal)
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, weights=weights)) + opt.lambda_normal * (Ll1_normal + tv_loss_normal)
         else:
             Ll1 = l1_loss(image, gt_image)
             loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
@@ -213,13 +220,13 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=6009)
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[30_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[20_000, 30_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[20_000, 30_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--panorama", action="store_true")
     parser.add_argument("--depth", action="store_true")
     parser.add_argument("--normal", action="store_true")
-    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[30_000])
+    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[20_000, 30_000])
     parser.add_argument("--start_checkpoint", type=str, default = None)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
