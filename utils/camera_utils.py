@@ -14,7 +14,7 @@ import torch
 import torchvision.utils
 from scene.cameras import Camera
 import numpy as np
-from utils.general_utils import PILtoTorch
+from utils.general_utils import PILtoTorch, NumpytoTorch
 from utils.graphics_utils import fov2focal
 from tqdm import tqdm
 WARNED = False
@@ -68,7 +68,7 @@ def loadCam(args, id, cam_info, resolution_scale, panorama=False):
 
     resized_depth = None
     if cam_info.depth is not None:
-        resized_depth = PILtoTorch(cam_info.depth, resolution)
+        resized_depth = NumpytoTorch(cam_info.depth, resolution)
 
     return Camera(colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY, 

@@ -12,18 +12,43 @@
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
+import torchvision.transforms as transforms
 from math import exp
 import numpy as np
+import time
 
+def save_tensor_as_image(tensor, path):
+    # テンソルを[0, 255]の範囲にスケーリング
+    tensor = tensor.squeeze().cpu()  # チャンネル次元を削除してCPUに移動
+    tensor = tensor - tensor.min()  # 最小値を0に
+    tensor = tensor / tensor.max()  # 最大値を1に
+    tensor = (tensor * 255).byte()  # [0, 255]にスケーリングしてバイト型に変換
+
+    # テンソルをPIL画像に変換
+    transform_to_pil = transforms.ToPILImage()
+    pil_image = transform_to_pil(tensor)
+
+    # 画像を保存
+    pil_image.save(path)
+    print(f"Image saved to {path}")
+    
 def latitude_weight(height):
     y = torch.arange(height).float()
     latitude = (y / height - 0.5) * np.pi
     weight = torch.cos(latitude)
     return weight.unsqueeze(-1).unsqueeze(0).expand(3, -1, -1)
 
-def l1_loss(network_output, gt, weights=None):
+def l1_loss(network_output, gt, weights=None, save_path_prefix=None):
     if weights is None:
         weights = torch.ones_like(gt)
+
+    if save_path_prefix:
+        save_tensor_as_image(network_output, f"{save_path_prefix}_network_output.png")
+        save_tensor_as_image(gt, f"{save_path_prefix}_gt.png")
+
+        # 5秒スリープ
+        time.sleep(5)
+
     return torch.abs((network_output - gt) * weights).mean()
 
 def total_variation_loss(image):

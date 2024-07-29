@@ -39,8 +39,6 @@ def read_exr_image(file_path):
     float_type = Imath.PixelType(Imath.PixelType.FLOAT)
     channels = exr_file.header()['channels'].keys()
     
-    # Print available channels for debugging
-
     # Try 'Z' channel first, fallback to 'R' if 'Z' is not available
     if 'Z' in channels:
         channel = exr_file.channel('Z', float_type)
@@ -52,12 +50,6 @@ def read_exr_image(file_path):
     depth_map = np.frombuffer(channel, dtype=np.float32)
     depth_map = np.array(depth_map)  # Copy array to ensure it's resizable
     depth_map = np.reshape(depth_map, (size[1], size[0]))
+    depth_map = 0.2 / np.power(depth_map, 1/0.4545)  # Cube all values in the depth_map
 
-    # Normalize depth values to 0-255 for visualization
-    depth_min = np.min(depth_map)
-    depth_max = np.max(depth_map)
-    depth_map = 255 * (depth_map - depth_min) / (depth_max - depth_min)
-    depth_map = depth_map.astype(np.uint8)
-    depth_image = Image.fromarray(depth_map)
-
-    return depth_image
+    return depth_map

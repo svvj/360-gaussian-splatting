@@ -1,14 +1,3 @@
-#
-# Copyright (C) 2023, Inria
-# GRAPHDECO research group, https://team.inria.fr/graphdeco
-# All rights reserved.
-#
-# This software is free for non-commercial, research and evaluation use 
-# under the terms of the LICENSE.md file.
-#
-# For inquiries contact  george.drettakis@inria.fr
-#
-
 import torch
 from torch import nn
 import numpy as np
@@ -17,8 +6,7 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 class Camera(nn.Module):
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, depth, normal, mask, gt_alpha_mask,
                  image_name, uid,
-                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda", panorama=False
-                 ):
+                 trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device="cuda", panorama=False):
         super(Camera, self).__init__()
 
         self.uid = uid
@@ -33,7 +21,7 @@ class Camera(nn.Module):
             self.data_device = torch.device(data_device)
         except Exception as e:
             print(e)
-            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device" )
+            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device")
             self.data_device = torch.device("cuda")
 
         self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
@@ -43,31 +31,37 @@ class Camera(nn.Module):
         self.is_masked = None
         if mask is not None:
             self.is_masked = (mask == 0).expand(*image.shape)  # True represent masked pixel
+
+        self.zfar = 100.0
+        self.znear = 0.01
+
+        self.depth = None
+        self.depth_mask = None  # 100以上の部分のマスク
+        if depth is not None:
+            depth = depth.to(self.data_device)
+            depth_clipped = torch.where((depth < self.znear) | (depth > self.zfar), torch.tensor(0.0, device=self.data_device), depth)
+            self.depth = ((depth_clipped - self.znear) / (self.zfar - self.znear)).clamp(0.0, 1.0)
+            self.depth_mask = (depth > self.zfar).float()
             
         if gt_alpha_mask is not None:
             self.original_image *= gt_alpha_mask.to(self.data_device)
-        else:
-            self.original_image *= torch.ones((1, self.image_height, self.image_width), device=self.data_device)
-
-        self.depth = None
-        if depth is not None:
-            self.depth = depth.clamp(0.0, 1.0).to(self.data_device)
 
         self.normal = None
         if normal is not None:
             self.normal = normal.clamp(0.0, 1.0).to(self.data_device)
-
-        self.zfar = 100.0
-        self.znear = 0.01
-
-        self.zfar = 100.0
-        self.znear = 0.01
+            
+        # depth_mask を適用
+        
+        if self.depth_mask is not None:
+        #    self.original_image *= (1 - self.depth_mask)  # depth_mask の部分を 0 に設定
+            self.depth *= (1 - self.depth_mask)  # depth_mask の部分を 0 に設定
+        #    self.normal *= (1 - self.depth_mask)  # depth_mask の部分を 0 に設定
 
         self.trans = trans
         self.scale = scale
 
         self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
-        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0, 1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
         self.panorama = panorama
@@ -92,17 +86,15 @@ class Camera(nn.Module):
             self.full_proj_transform_left = (self.world_view_transform_left.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
             self.camera_center_left = self.world_view_transform_left.inverse()[3, :3]
 
-
-
     def rotate_camera_coordinate(self, R, T):
         R_y = np.array([[ 0.0, 0.0,  1.0, 0.0], [ 0.0,  1.0,  0.0, 0.0], [ -1.0,  0.0,  0.0, 0.0], [ 0.0,  0.0,  0.0, 1.0]])
 
         Rt = np.zeros((4, 4)) # w2c
-        Rt[:3, :3] = R.transpose() 
+        Rt[:3, :3] = R.transpose()
         Rt[:3, 3] = T
-        Rt[3, 3] = 1.0  
+        Rt[3, 3] = 1.0
         c2w_tmp = np.linalg.inv(Rt) # c2w
-        RT_c2w = np.matmul(c2w_tmp,R_y.transpose())
+        RT_c2w = np.matmul(c2w_tmp, R_y.transpose())
         R = RT_c2w[:3, :3]
         T = np.linalg.inv(RT_c2w)[:3, 3]
         return R, T
@@ -110,7 +102,7 @@ class Camera(nn.Module):
 class MiniCam:
     def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):
         self.image_width = width
-        self.image_height = height    
+        self.image_height = height
         self.FoVy = fovy
         self.FoVx = fovx
         self.znear = znear
@@ -119,4 +111,3 @@ class MiniCam:
         self.full_proj_transform = full_proj_transform
         view_inv = torch.inverse(self.world_view_transform)
         self.camera_center = view_inv[3][:3]
-

@@ -87,12 +87,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             render_pkg = render_spherical(viewpoint_cam, gaussians, pipe, bg)
         else:
             render_pkg = render(viewpoint_cam, gaussians, pipe, bg)
-        image, normal, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["normals"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
+        image, normal_rendered, depth_rendered, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["normals"], render_pkg["depths"]/100.0, render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
         try:
-            gt_normal = viewpoint_cam.normal.cuda()
+            if normal:
+                gt_normal = viewpoint_cam.normal.cuda()
+            if depth:
+                gt_depth = viewpoint_cam.depth.cuda()
+                depth_rendered *= (1 - viewpoint_cam.depth_mask)  # depth_mask の部分を 0 に設定
         except:
             continue
             
@@ -102,12 +106,22 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             gt_image[mask] = image.detach()[mask]
         if viewpoint_cam.panorama:
             Ll1 = l1_loss(image, gt_image, weights=weights)
-            Ll1_normal = l1_loss(normal, gt_normal, weights=weights)
-            tv_loss_normal = total_variation_loss(normal)
-            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, weights=weights)) + opt.lambda_normal * (Ll1_normal + tv_loss_normal)
+            loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image, weights=weights))
+            
+            if depth:
+                Ll1_depth = l1_loss(depth_rendered, gt_depth, weights=weights)
+                tv_loss_depth = total_variation_loss(depth_rendered)
+                loss += opt.lambda_depth * (Ll1_depth + tv_loss_depth)
+            
+            if normal:
+                Ll1_normal = l1_loss(normal_rendered, gt_normal, weights=weights)
+                tv_loss_normal = total_variation_loss(normal_rendered)
+                loss += opt.lambda_normal * (Ll1_normal + tv_loss_normal)
+        
         else:
             Ll1 = l1_loss(image, gt_image)
             loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image))
+        
         loss.backward()
 
         iter_end.record()
@@ -220,13 +234,13 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=6009)
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[20_000, 30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[20_000, 30_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[15_000, 30_000, 100_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[15_000, 30_000, 100_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--panorama", action="store_true")
     parser.add_argument("--depth", action="store_true")
     parser.add_argument("--normal", action="store_true")
-    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[20_000, 30_000])
+    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[15_000, 30_000, 100_000])
     parser.add_argument("--start_checkpoint", type=str, default = None)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
