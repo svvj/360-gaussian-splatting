@@ -36,6 +36,23 @@ In addition to the original repository, install the following module as well:
 pip3 install submodules/diff-gaussian-rasterization submodules/simple-knn plyfile pyproj
 ```
 
+### For Depth and Normal Rendering
+
+If you use depth and normal for training, use depth_normal_render
+
+```bash
+git clone --recursive -b depth_normal_render https://github.com/inuex35/360-gaussian-splatting 
+```
+
+and 
+
+```bash
+git clone --recursive -b depth_normal_render https://github.com/inuex35/360-gaussian-splatting
+cd 360-gaussian-splatting
+git clone https://github.com/inuex35/360-dn-diff-gaussian-rasterization submodules/360-dn-diff-gaussian-rasterization
+pip3 install submodules/360-dn-diff-gaussian-rasterization submodules/simple-knn plyfile pyproj openexr imageio
+```
+
 ## Training 360 Gaussian Splatting
 
 First, generate point clouds using images from a 360-degree camera with OpenSfM. Refer to the following repository and use this command for reconstruction:
