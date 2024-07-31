@@ -47,7 +47,6 @@ git clone --recursive -b depth_normal_render https://github.com/inuex35/360-gaus
 and 
 
 ```bash
-git clone --recursive -b depth_normal_render https://github.com/inuex35/360-gaussian-splatting
 cd 360-gaussian-splatting
 git clone https://github.com/inuex35/360-dn-diff-gaussian-rasterization submodules/360-dn-diff-gaussian-rasterization
 pip3 install submodules/360-dn-diff-gaussian-rasterization submodules/simple-knn plyfile pyproj openexr imageio
