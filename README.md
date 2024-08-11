@@ -36,6 +36,15 @@ In addition to the original repository, install the following module as well:
 pip3 install submodules/diff-gaussian-rasterization submodules/simple-knn plyfile pyproj
 ```
 
+### For omnigs rendering
+
+You can use omnigs implementation. Checkout diff-gaussian-rasterization to omnigs branch.
+
+```bash
+cd submodules/diff-gaussian-rasterization
+git checkout omnigs
+```
+
 ### For Depth and Normal Rendering
 
 If you use depth and normal for training, use depth_normal_render
