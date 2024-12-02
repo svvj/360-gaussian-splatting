@@ -393,6 +393,9 @@ def readOpensfmSceneInfo(path, images, eval, panorama, depth, normal, llffhold=8
         normal_dir = ""
         depth_dir = ""
         reading_dir = "images" if images == None else images
+        # Set panorama to True if the scene is a spherical panorama
+        panorama = True
+        print("Panorama: ", panorama)
         if panorama:
             reading_dir = "images"
             if normal:

@@ -3,6 +3,7 @@ import math
 from diff_gauss import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
+from matplotlib import pyplot as plt
 
 def render(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, scaling_modifier=1.0, override_color=None):
     """
@@ -70,7 +71,7 @@ def render(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, sc
     rendered_image, radii, normals, depths = rasterizer(means3D=means3D, means2D=means2D, shs=shs,
                                                          colors_precomp=colors_precomp, opacities=opacity,
                                                          scales=scales, rotations=rotations,
-                                                         cov3D_precomp=cov3D_precomp)
+                                                         cov3Ds_precomp=cov3D_precomp)
 
     return {"render": rendered_image,
             "viewspace_points": screenspace_points,
@@ -180,7 +181,6 @@ def render_spherical(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.
     
     Background tensor (bg_color) must be on GPU!
     """
-    
     screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
     try:
         screenspace_points.retain_grad()

@@ -8,3 +8,6 @@
 [submodule "submodules/diff-gaussian-rasterization"]
 	path = submodules/diff-gaussian-rasterization
 	url = https://github.com/inuex35/360-diff-gaussian-rasterization
+[submodule "360-dn-diff-gaussian-rasterization"]
+	path = 360-dn-diff-gaussian-rasterization
+	url = https://github.com/inuex35/360-dn-diff-gaussian-rasterization

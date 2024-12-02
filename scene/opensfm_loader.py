@@ -71,6 +71,10 @@ def rotmat2qvec(R):
 def angle_axis_to_quaternion(angle_axis: np.ndarray):
     angle = np.linalg.norm(angle_axis)
 
+    # if angle is zero, return identity quaternion
+    if angle == 0:
+        return np.array([1, 0, 0, 0])
+
     x = angle_axis[0] / angle
     y = angle_axis[1] / angle
     z = angle_axis[2] / angle
@@ -142,7 +146,6 @@ def read_opensfm_points3D(reconstructions):
             rgbs[count] = rgb
             errors[count] = error
             count += 1
-
     return xyzs, rgbs, errors
 
 def read_opensfm_intrinsics_split(reconstructions):
@@ -192,7 +195,7 @@ def read_opensfm_intrinsics(reconstructions):
                 camera_id = 0 # assume only one camera
                 model = "SPHERICAL"
                 width = reconstruction["cameras"][camera]["width"]
-                height = width / 4
+                height = reconstruction["cameras"][camera]["height"]
                 f = 0
                 params = np.array([f, width , height])
                 cameras[camera_id] = Camera(id=camera_id, model=model,
@@ -274,6 +277,7 @@ def read_opensfm(reconstructions):
             camera_name = camera
             camera_info = reconstruction["cameras"][camera]
             if camera_info['projection_type'] in ['spherical', 'equirectangular']:
+                # All spherical cameras are assumed to have the same intrinsic parameters
                 camera_id = 0
                 model = "SPHERICAL"
                 width = reconstruction["cameras"][camera]["width"]
