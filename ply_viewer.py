@@ -14,5 +14,5 @@ def ply_viewer(path):
     print(img_path)
 
 if __name__ == "__main__":
-    ply_folder = '/home/hci/workspace/360-gaussian-splatting/output/4783153e-0/input.ply'
+    ply_folder = 'training_output/input.ply'
     ply_viewer(ply_folder)
