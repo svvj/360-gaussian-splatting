@@ -1,6 +1,6 @@
 import torch
 import math
-from diff_gauss import GaussianRasterizationSettings, GaussianRasterizer
+from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 from matplotlib import pyplot as plt
@@ -235,7 +235,7 @@ def render_spherical(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.
     else:
         colors_precomp = override_color
 
-    #rendered_image, radii, normals, depths = rasterizer(means3D=means3D, means2D=means2D, shs=shs,
+    # rendered_image, radii, normals, depths = rasterizer(means3D=means3D, means2D=means2D, shs=shs,
     #                                                     colors_precomp=colors_precomp, opacities=opacity,
     #                                                     scales=scales, rotations=rotations,
     #                                                     cov3D_precomp=cov3D_precomp)

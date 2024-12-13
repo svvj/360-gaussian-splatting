@@ -306,8 +306,10 @@ def read_opensfm(reconstructions):
         if reference_lat<0:
             reference_y=reference_y+10000000
         for shot in reconstruction["shots"]:
-            translation = reconstruction["shots"][shot]["translation"]
-            rotation = reconstruction["shots"][shot]["rotation"]
+            translation_json = reconstruction["shots"][shot]["translation"]
+            translation = np.array([translation_json['x'], translation_json['y'], translation_json['z']])
+            rotation_json = reconstruction["shots"][shot]["rotation"]
+            rotation = np.array([rotation_json['x'], rotation_json['y'], rotation_json['z']])
             qvec = angle_axis_to_quaternion(rotation)
             diff_ref_x = reference_x - reference_x_0
             diff_ref_y = reference_y - reference_y_0

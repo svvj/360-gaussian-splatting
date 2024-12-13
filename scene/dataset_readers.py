@@ -401,7 +401,7 @@ def readOpensfmSceneInfo(path, images, eval, panorama, depth, normal, llffhold=8
         panorama = True
         print("Panorama: ", panorama)
         if panorama:
-            reading_dir = "images"
+            reading_dir = images
             if normal:
                 normal_dir = "normals"
             if depth:
